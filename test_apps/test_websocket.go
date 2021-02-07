@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/gorilla/websocket"
+	"os"
 	"time"
 )
 
@@ -19,7 +20,18 @@ func main() {
 
 	go func() {
 		defer close(done)
-		conn.WriteMessage(websocket.TextMessage, []byte("init00id1"))
+		initPacket := make(map[string]string)
+
+		initPacket["PacketType"] = "init"
+		initPacket["Role"] = "camera"
+		initPacket["Id"] = "doorbell01"
+
+		if err != nil {
+			panic(err)
+		}
+
+		// send init packet
+		conn.WriteJSON(initPacket)
 
 		ticker := time.NewTicker(time.Second)
 		quit := make(chan struct{})
@@ -40,11 +52,13 @@ func main() {
 			_, message, err := conn.ReadMessage()
 			if err != nil {
 				fmt.Println("read:", err)
-				return
+				break
 			}
 
 			fmt.Println("recv:", message)
 		}
+
+		os.Exit(0)
 	}()
 
 	select {}
