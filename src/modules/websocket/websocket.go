@@ -11,16 +11,17 @@ type Client struct {
 	Id     string
 }
 
-func (c Client) ReadLoop(controller func(message string, client Client)) error {
+func (c Client) ReadLoop(controller func(packet CommandPacket, client Client)) error {
 	for {
-		_, message, err := c.socket.ReadMessage()
+		var packet CommandPacket
+		err := c.socket.ReadJSON(&packet)
 
 		if err != nil {
 			// read error, assume disconnect
 			return err
 		} else {
 			// pass message to socket controller
-			controller(string(message), c)
+			controller(packet, c)
 		}
 
 	}
@@ -28,6 +29,22 @@ func (c Client) ReadLoop(controller func(message string, client Client)) error {
 
 func (c Client) SendMessage(message string) {
 	err := c.socket.WriteMessage(websocket.TextMessage, []byte(message))
+
+	if err != nil {
+		panic(err)
+	}
+}
+
+func (c Client) SendCommand(command CommandPacket) {
+	err := c.socket.WriteJSON(command)
+
+	if err != nil {
+		panic(err)
+	}
+}
+
+func (c Client) SendError(error ErrorPacket) {
+	err := c.socket.WriteJSON(error)
 
 	if err != nil {
 		panic(err)

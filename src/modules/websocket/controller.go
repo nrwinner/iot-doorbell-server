@@ -1,14 +1,14 @@
 package websocket
 
 type Controller struct {
-	MessageEventHandler    func(message string, client Client)
+	MessageEventHandler    func(packet CommandPacket, client Client)
 	ConnectEventHandler    func(client Client)
 	DisconnectEventHandler func(client Client)
 }
 
-func (controller *Controller) HandleMessage(message string, client Client) {
+func (controller *Controller) HandleMessage(packet CommandPacket, client Client) {
 	if controller.MessageEventHandler != nil {
-		controller.MessageEventHandler(message, client)
+		controller.MessageEventHandler(packet, client)
 	}
 }
 

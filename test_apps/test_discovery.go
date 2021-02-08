@@ -17,7 +17,6 @@ func main() {
 	pc, err := net.ListenPacket("udp4", ":"+RECEIVE_PORT)
 
 	if err != nil {
-		fmt.Println("whee")
 		panic(err)
 	}
 
