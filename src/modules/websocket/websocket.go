@@ -11,7 +11,7 @@ type WebSocketServer struct {
 	connections []Client
 }
 
-func (s *WebSocketServer) StartServer(controllers []entities.Controller) {
+func (s WebSocketServer) StartServer(controllers []entities.Controller) {
 	// set the default path to use our websocket handler
 	http.HandleFunc("/", s.handleConnection(controllers))
 	err := http.ListenAndServe("localhost:1234", nil)
