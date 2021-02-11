@@ -40,7 +40,12 @@ func main() {
 			for {
 				select {
 				case <-ticker.C:
-					conn.WriteMessage(websocket.TextMessage, []byte("this is a test message"))
+					conn.WriteJSON(CommandPacket{
+						Id:         "doorbell01",
+						PacketType: "command",
+						Command:    "test/request",
+						Args:       []string{},
+					})
 				case <-quit:
 					ticker.Stop()
 					return
@@ -49,13 +54,14 @@ func main() {
 		}()
 
 		for {
-			_, message, err := conn.ReadMessage()
+			var packet CommandPacket
+			err := conn.ReadJSON(&packet)
 			if err != nil {
 				fmt.Println("read:", err)
 				break
 			}
 
-			fmt.Println("recv:", message)
+			fmt.Println("recv:", packet)
 		}
 
 		os.Exit(0)

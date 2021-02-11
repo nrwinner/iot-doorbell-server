@@ -1,63 +1,19 @@
 package websocket
 
 import (
-	"github.com/gorilla/websocket"
+	"doorbell-server/src/entities"
 	"net/http"
+
+	ws "github.com/gorilla/websocket"
 )
-
-type Client struct {
-	socket *websocket.Conn
-	Role   string
-	Id     string
-}
-
-func (c Client) ReadLoop(controller func(packet CommandPacket, client Client)) error {
-	for {
-		var packet CommandPacket
-		err := c.socket.ReadJSON(&packet)
-
-		if err != nil {
-			// read error, assume disconnect
-			return err
-		} else {
-			// pass message to socket controller
-			controller(packet, c)
-		}
-
-	}
-}
-
-func (c Client) SendMessage(message string) {
-	err := c.socket.WriteMessage(websocket.TextMessage, []byte(message))
-
-	if err != nil {
-		panic(err)
-	}
-}
-
-func (c Client) SendCommand(command CommandPacket) {
-	err := c.socket.WriteJSON(command)
-
-	if err != nil {
-		panic(err)
-	}
-}
-
-func (c Client) SendError(error ErrorPacket) {
-	err := c.socket.WriteJSON(error)
-
-	if err != nil {
-		panic(err)
-	}
-}
 
 type WebSocketServer struct {
 	connections []Client
 }
 
-func (s WebSocketServer) StartServer(controller Controller) {
+func (s *WebSocketServer) StartServer(controllers []entities.Controller) {
 	// set the default path to use our websocket handler
-	http.HandleFunc("/", s.handleConnection(controller))
+	http.HandleFunc("/", s.handleConnection(controllers))
 	err := http.ListenAndServe("localhost:1234", nil)
 
 	if err != nil {
@@ -66,9 +22,9 @@ func (s WebSocketServer) StartServer(controller Controller) {
 	}
 }
 
-func (s *WebSocketServer) handleConnection(controller Controller) func(w http.ResponseWriter, r *http.Request) {
+func (s *WebSocketServer) handleConnection(controllers []entities.Controller) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		upgrader := websocket.Upgrader{}
+		upgrader := ws.Upgrader{}
 		conn, err := upgrader.Upgrade(w, r, nil)
 
 		if err != nil {
@@ -103,24 +59,46 @@ func (s *WebSocketServer) handleConnection(controller Controller) func(w http.Re
 			client,
 		)
 
-		controller.HandleConnect(client)
+		// call OnConnect for all controllers
+		for _, controller := range controllers {
+			controller.OnConnect(&client)
+		}
+
+		// create a new Responder for this client
+		responder := s.createResponder(client.Id)
+
+		// parse the command
 
 		// enter read loop and block
-		readErr := client.ReadLoop(controller.HandleMessage)
+		var readErr error
+		for readErr == nil {
+			var packet CommandPacket
+			err := client.socket.ReadJSON(&packet)
 
-		// at this point, readErr must be defined, but check for sanity
-		if readErr != nil {
-			s.disconnectClientById(client.Id, controller.HandleDisconnect)
+			if err != nil {
+				// read error, assume disconnect
+				readErr = err
+				// call OnDisconnect for all controllers
+				s.disconnectClientById(client.Id, controllers)
+			} else {
+				// pass message to socket controller
+				for _, controller := range controllers {
+					command := CommandFromPacket(packet)
+					command.Responder = responder
+					controller.ParseCommand(client, command)
+				}
+			}
+
 		}
 	}
 }
 
-func socketErrorAndTerminate(conn *websocket.Conn, message string) {
-	_ = conn.WriteMessage(websocket.TextMessage, []byte("error - '"+message+"', closing connection"))
+func socketErrorAndTerminate(conn *ws.Conn, message string) {
+	_ = conn.WriteMessage(ws.TextMessage, []byte("error - '"+message+"', closing connection"))
 	conn.Close()
 }
 
-func (s *WebSocketServer) disconnectClientById(id string, disconnectHandler func(client Client)) {
+func (s *WebSocketServer) disconnectClientById(id string, controllers []entities.Controller) {
 	var newConnections []Client
 
 	// remove this Client from list of connections
@@ -129,7 +107,11 @@ func (s *WebSocketServer) disconnectClientById(id string, disconnectHandler func
 			newConnections = append(newConnections, c)
 		} else {
 			c.socket.Close()
-			disconnectHandler(c)
+
+			for _, controller := range controllers {
+				// call DisconnectEventHandler for all controllers
+				controller.OnDisconnect(&c)
+			}
 		}
 	}
 
@@ -158,4 +140,28 @@ func (s *WebSocketServer) locateAllClientsWithRole(role string) []*Client {
 	}
 
 	return payload
+}
+
+func (s *WebSocketServer) createResponder(id string) entities.Responder {
+	return entities.Responder{
+		Respond: func(command entities.Command) {
+			// fetch client
+			client := s.locateClient(id)
+
+			if client != nil {
+				client.SendCommand(command)
+			} else {
+				panic("client doesn't exist")
+			}
+		},
+		RespondError: func(error string) {
+			client := s.locateClient(id)
+
+			if client != nil {
+				client.SendError(error)
+			} else {
+				panic("client doesn't exist")
+			}
+		},
+	}
 }

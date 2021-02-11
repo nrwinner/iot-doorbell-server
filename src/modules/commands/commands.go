@@ -16,7 +16,6 @@ const (
 var connections = make(map[string]*webrtc.PeerConnection)
 
 func ParseCommand(client websocket.Client, command string, args []string) {
-	fmt.Println(command)
 	if command == offer_command {
 		var offer webrtc.SessionDescription
 		err := json.Unmarshal([]byte(args[0]), &offer)

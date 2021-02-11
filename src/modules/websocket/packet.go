@@ -1,5 +1,7 @@
 package websocket
 
+import "doorbell-server/src/entities"
+
 const (
 	INIT_PACKET    = "init"
 	COMMAND_PACKET = "command"
@@ -9,7 +11,6 @@ const (
 type Packet struct {
 	Id         string
 	PacketType string
-	ResponseId string
 }
 
 type InitPacket struct {
@@ -27,4 +28,21 @@ type CommandPacket struct {
 type ErrorPacket struct {
 	Packet
 	Error string
+}
+
+func CommandFromPacket(packet CommandPacket) entities.Command {
+	return entities.Command{
+		Path: packet.Command,
+		Args: packet.Args,
+	}
+}
+
+func PacketFromCommand(command entities.Command) CommandPacket {
+	return CommandPacket {
+		Packet: Packet{
+			PacketType: COMMAND_PACKET,
+		},
+		Command: command.Path,
+		Args: command.Args,
+	}
 }

@@ -11,12 +11,7 @@ const (
 	ID = "doorbell01"
 )
 
-type CommandPacket struct {
-	Id         string
-	PacketType string
-	Command    string
-	Args       []string
-}
+var connectionId string
 
 func main() {
 	conn, _, err := websocket.DefaultDialer.Dial("ws://localhost:1234", nil)
@@ -43,6 +38,12 @@ func main() {
 
 		// send init packet
 		conn.WriteJSON(initPacket)
+
+		signal(conn, "new", nil)
+
+		var newConnectionResult CommandPacket
+		err := conn.ReadJSON(&newConnectionResult)
+		connectionId = newConnectionResult.Args[0]
 
 		peer, err := webrtc.NewPeerConnection(webrtc.Configuration{
 			ICEServers: []webrtc.ICEServer{
@@ -110,24 +111,33 @@ func main() {
 		peer.AddTrack(track)
 	}()
 
+	// block forever
 	select {}
 }
 
 func signal(conn *websocket.Conn, name string, payload interface{}) {
-	j, err := json.Marshal(payload)
+	var args []string
 
-	if err != nil {
-		panic(err)
+	if connectionId != "" {
+		args = append(args, connectionId)
+	}
+
+	if payload != nil {
+		j, err := json.Marshal(payload)
+		if err != nil {
+			panic(err)
+		}
+		args = append(args, string(j))
 	}
 
 	packet := CommandPacket{
 		Id:         ID,
 		PacketType: "command",
 		Command:    "webrtc/" + name,
-		Args:       []string{string(j)},
+		Args:       args,
 	}
 
-	err = conn.WriteJSON(packet)
+	err := conn.WriteJSON(packet)
 	if err != nil {
 		fmt.Println("Signal error for", name)
 		panic(err)
