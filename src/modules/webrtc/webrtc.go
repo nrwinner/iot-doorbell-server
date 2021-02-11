@@ -44,6 +44,7 @@ func HandleNewCommand(controller *WebRTCController, command entities.Command) {
 		fmt.Println("Initial Count", len(controller.connections))
 		if state.String() == "disconnected" {
 			// close the connection on disconnect
+			// TODO:NickW does WebRTC have an automatic reconnect capability that we're disabling here?
 			err := controller.connections[id].Close()
 			if err != nil {
 				// noop, couldn't close connection
