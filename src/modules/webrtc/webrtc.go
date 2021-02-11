@@ -43,7 +43,14 @@ func HandleNewCommand(controller *WebRTCController, command entities.Command) {
 	controller.connections[id].OnConnectionStateChange(func(state webrtc.PeerConnectionState) {
 		fmt.Println("Initial Count", len(controller.connections))
 		if state.String() == "disconnected" {
-			// remove the id from the map of connections
+			// close the connection on disconnect
+			err := controller.connections[id].Close()
+			if err != nil {
+				// noop, couldn't close connection
+				fmt.Println("Could not close connection")
+			}
+
+			// remove the connection from stateful map
 			delete(controller.connections, id)
 		}
 		fmt.Println(state)
