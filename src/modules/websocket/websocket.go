@@ -11,6 +11,10 @@ type WebSocketServer struct {
 	connections []Client
 }
 
+const (
+	initPacket = "system/init"
+)
+
 func (s WebSocketServer) StartServer(controllers []entities.Controller) {
 	// set the default path to use our websocket handler
 	http.HandleFunc("/", s.handleConnection(controllers))
@@ -35,16 +39,19 @@ func (s *WebSocketServer) handleConnection(controllers []entities.Controller) fu
 		defer conn.Close()
 
 		// the first message on a new connection should be the initialization packet
-		var packet InitPacket
+		var packet CommandPacket
 		err = conn.ReadJSON(&packet)
 
-		if err != nil || packet.PacketType != INIT_PACKET {
+		id, hasId := packet.Args["id"]
+		role, hasRole := packet.Args["role"]
+
+		if err != nil || packet.Command != initPacket || !hasId || !hasRole {
 			socketErrorAndTerminate(conn, "could not decode init packet")
 			return
 		}
 
 		// create new Client connection
-		existingClient := s.locateClient(packet.Id)
+		existingClient := s.locateClient(id)
 
 		if existingClient != nil {
 			// this should never happen, sanity check
@@ -52,7 +59,7 @@ func (s *WebSocketServer) handleConnection(controllers []entities.Controller) fu
 			return
 		}
 
-		client := Client{socket: conn, Role: packet.Role, Id: packet.Id}
+		client := Client{socket: conn, Role: role, Id: id}
 
 		s.connections = append(
 			s.connections,

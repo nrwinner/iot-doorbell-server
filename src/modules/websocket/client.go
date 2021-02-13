@@ -29,7 +29,6 @@ func (c Client) SendMessage(message string) {
 
 func (c Client) SendCommand(command entities.Command) {
 	packet := PacketFromCommand(command)
-	packet.Id = c.Id
 	err := c.socket.WriteJSON(packet)
 
 	if err != nil {
@@ -39,7 +38,7 @@ func (c Client) SendCommand(command entities.Command) {
 
 func (c Client) SendError(error string) {
 	packet := ErrorPacket{
-		Packet: Packet{Id: c.Id, PacketType: ERROR_PACKET},
+		Packet: Packet{PacketType: ERROR_PACKET},
 		Error:  error,
 	}
 	err := c.socket.WriteJSON(packet)

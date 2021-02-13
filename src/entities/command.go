@@ -2,6 +2,6 @@ package entities
 
 type Command struct {
 	Path string
-	Args []string
+	Args map[string]string
 	Responder Responder
 }

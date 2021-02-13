@@ -22,7 +22,7 @@ func main() {
 						fmt.Println("Received:", command.Path)
 						command.Responder.Respond(entities.Command{
 							Path: "test/response",
-							Args: []string{"response body"},
+							Args: map[string]string{"response": "response body"},
 						})
 					}
 				}, nil, nil),

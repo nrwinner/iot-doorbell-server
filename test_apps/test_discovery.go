@@ -1,13 +1,12 @@
 package main
 
 import (
-	"fmt"
 	"net"
 )
 
 const (
 	BROADCAST_PORT = "9999"
-	RECEIVE_PORT = "9998"
+	RECEIVE_PORT   = "9998"
 	BROADCAST      = "255.255.255.255"
 	MARCO          = "marco"
 	POLO           = "polo"
@@ -44,6 +43,5 @@ func main() {
 
 	if string(buffer[:packetLength]) == POLO {
 		serverAddress.String()
-		fmt.Println("Address found!", serverAddress.String())
 	}
 }

@@ -20,11 +20,14 @@ func main() {
 
 	go func() {
 		defer close(done)
-		initPacket := make(map[string]string)
-
-		initPacket["PacketType"] = "init"
-		initPacket["Role"] = "camera"
-		initPacket["Id"] = "doorbell01"
+		initPacket := CommandPacket{
+			PacketType: "command",
+			Command: "system/init",
+			Args: map[string]string{
+				"id": "doorbell01",
+				"role": "camera",
+			},
+		}
 
 		if err != nil {
 			panic(err)
@@ -44,7 +47,6 @@ func main() {
 						Id:         "doorbell01",
 						PacketType: "command",
 						Command:    "test/request",
-						Args:       []string{},
 					})
 				case <-quit:
 					ticker.Stop()

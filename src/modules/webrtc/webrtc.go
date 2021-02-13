@@ -41,34 +41,33 @@ func HandleNewCommand(controller *WebRTCController, command entities.Command) {
 
 	// set disconnect handler for PeerConnection
 	controller.connections[id].OnConnectionStateChange(func(state webrtc.PeerConnectionState) {
-		fmt.Println("Initial Count", len(controller.connections))
 		if state.String() == "disconnected" {
 			// close the connection on disconnect
 			// TODO:NickW does WebRTC have an automatic reconnect capability that we're disabling here?
 			err := controller.connections[id].Close()
 			if err != nil {
 				// noop, couldn't close connection
-				fmt.Println("Could not close connection")
+				fmt.Println("Could not close connection on disconnect")
 			}
 
 			// remove the connection from stateful map
 			delete(controller.connections, id)
 		}
-		fmt.Println(state)
-		fmt.Println("Final Count", len(controller.connections))
 	})
 
 	// respond to requester with id
 	command.Responder.Respond(entities.Command{
 		Path: NEW_CONFIRM_COMMAND,
-		Args: []string{id},
+		Args: map[string]string{
+			"id": id,
+		},
 	})
 }
 
 func HandleOfferCommand(controller *WebRTCController, command entities.Command) {
 	// retrieve the peer id and offer from the command's Args array
-	id := command.Args[0]
-	offerStr := command.Args[1]
+	id := command.Args["id"]
+	offerStr := command.Args["offer"]
 
 	// retrieve the existing peer from the controller, err if does not exist
 	peer := controller.connections[id]
@@ -110,7 +109,9 @@ func HandleOfferCommand(controller *WebRTCController, command entities.Command) 
 
 	answerCommand := entities.Command{
 		Path: ANSWER_COMMAND,
-		Args: []string{string(answerStr)},
+		Args: map[string]string{
+			"answer": string(answerStr),
+		},
 	}
 
 	command.Responder.Respond(answerCommand)
@@ -118,8 +119,8 @@ func HandleOfferCommand(controller *WebRTCController, command entities.Command) 
 
 func HandleCandidateCommand(controller *WebRTCController, command entities.Command) {
 	// fetch peer id and candidate from command's Args
-	id := command.Args[0]
-	candidateStr := command.Args[1]
+	id := command.Args["id"]
+	candidateStr := command.Args["candidate"]
 	peer := controller.connections[id]
 
 	if peer == nil {

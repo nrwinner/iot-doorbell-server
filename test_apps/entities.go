@@ -4,5 +4,5 @@ type CommandPacket struct {
 	Id         string
 	PacketType string
 	Command    string
-	Args       []string
+	Args       map[string]string
 }
