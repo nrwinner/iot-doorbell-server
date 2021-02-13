@@ -92,7 +92,7 @@ func (s *WebSocketServer) handleConnection(controllers []entities.Controller) fu
 				for _, controller := range controllers {
 					command := CommandFromPacket(packet)
 					command.Responder = responder
-					controller.ParseCommand(client, command)
+					controller.ParseCommand(&client, command)
 				}
 			}
 

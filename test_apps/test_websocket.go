@@ -29,10 +29,6 @@ func main() {
 			},
 		}
 
-		if err != nil {
-			panic(err)
-		}
-
 		// send init packet
 		conn.WriteJSON(initPacket)
 

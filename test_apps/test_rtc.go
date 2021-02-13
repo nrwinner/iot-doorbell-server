@@ -26,14 +26,13 @@ func main() {
 
 	go func() {
 		defer close(done)
-		initPacket := make(map[string]string)
-
-		initPacket["PacketType"] = "init"
-		initPacket["Role"] = "camera"
-		initPacket["Id"] = ID
-
-		if err != nil {
-			panic(err)
+		initPacket := CommandPacket{
+			PacketType: "command",
+			Command:    "system/init",
+			Args: map[string]string{
+				"id":   "doorbell01",
+				"role": "camera",
+			},
 		}
 
 		// send init packet
@@ -43,7 +42,7 @@ func main() {
 
 		var newConnectionResult CommandPacket
 		err := conn.ReadJSON(&newConnectionResult)
-		connectionId = newConnectionResult.Args[0]
+		connectionId = newConnectionResult.Args["id"]
 
 		peer, err := webrtc.NewPeerConnection(webrtc.Configuration{
 			ICEServers: []webrtc.ICEServer{
@@ -63,7 +62,7 @@ func main() {
 		peer.OnICECandidate(func(candidate *webrtc.ICECandidate) {
 			// transmit the new ice candidate via the signal servers
 			if candidate != nil {
-				signal(conn, "candidate", candidate.ToJSON())
+				signal(conn, "candidate", map[string]interface{}{"candidate": candidate.ToJSON()})
 			}
 		})
 
@@ -84,7 +83,7 @@ func main() {
 				}
 
 				var answer webrtc.SessionDescription
-				json.Unmarshal([]byte(answerPacket.Args[0]), &answer)
+				json.Unmarshal([]byte(answerPacket.Args["answer"]), &answer)
 
 				err = peer.SetRemoteDescription(answer)
 				if err != nil {
@@ -104,7 +103,7 @@ func main() {
 			}
 
 			// send offer via signal server
-			signal(conn, "offer", offer)
+			signal(conn, "offer", map[string]interface{}{"offer": offer})
 		})
 
 		track, err := webrtc.NewTrackLocalStaticRTP(webrtc.RTPCodecCapability{MimeType: "video/vp8"}, "", "")
@@ -115,19 +114,22 @@ func main() {
 	select {}
 }
 
-func signal(conn *websocket.Conn, name string, payload interface{}) {
-	var args []string
+func signal(conn *websocket.Conn, name string, payload map[string]interface{}) {
+	args := make(map[string]string)
 
 	if connectionId != "" {
-		args = append(args, connectionId)
+		args["id"] = connectionId
 	}
 
 	if payload != nil {
-		j, err := json.Marshal(payload)
-		if err != nil {
-			panic(err)
+		for key, value := range payload {
+			valueString, err := json.Marshal(value)
+			if err != nil {
+				panic(err)
+			}
+
+			args[key] = string(valueString)
 		}
-		args = append(args, string(j))
 	}
 
 	packet := CommandPacket{
