@@ -25,7 +25,10 @@ func main() {
 							Args: map[string]string{"response": "response body"},
 						})
 					}
-				}, nil, nil),
+				},
+				func(client entities.Client) { println("Connection", client.GetId()) },
+				func(client entities.Client) { println("Disconnection", client.GetId()) },
+			),
 		},
 	)
 

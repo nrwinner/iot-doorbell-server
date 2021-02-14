@@ -18,7 +18,7 @@ const (
 func (s WebSocketServer) StartServer(controllers []entities.Controller) {
 	// set the default path to use our websocket handler
 	http.HandleFunc("/", s.handleConnection(controllers))
-	err := http.ListenAndServe("localhost:1234", nil)
+	err := http.ListenAndServe(":1234", nil)
 
 	if err != nil {
 		// TODO:NickW better error handling here
