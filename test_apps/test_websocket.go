@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/gorilla/websocket"
 	"os"
@@ -43,6 +44,7 @@ func main() {
 						Id:         "doorbell01",
 						PacketType: "command",
 						Command:    "test/request",
+						TargetDeviceId: "camera02",
 					})
 				case <-quit:
 					ticker.Stop()
@@ -53,13 +55,24 @@ func main() {
 
 		for {
 			var packet CommandPacket
-			err := conn.ReadJSON(&packet)
+			var errorPacket ErrorPacket
+
+			_, message, err := conn.ReadMessage()
 			if err != nil {
 				fmt.Println("read:", err)
 				break
 			}
 
-			fmt.Println("recv:", packet)
+			// unmarshal as a command and check packet type
+			json.Unmarshal(message, &packet)
+
+			if (packet.PacketType == "error") {
+				// packet type is an error, unmarshal again as an error packet and handle
+				json.Unmarshal(message, &errorPacket)
+				fmt.Println("recv:", errorPacket)
+			} else {
+				fmt.Println("recv:", packet)
+			}
 		}
 
 		os.Exit(0)

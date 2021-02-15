@@ -74,8 +74,6 @@ func (s *WebSocketServer) handleConnection(controllers []entities.Controller) fu
 		// create a new Responder for this client
 		responder := s.createResponder(client.Id)
 
-		// parse the command
-
 		// enter read loop and block
 		var readErr error
 		for readErr == nil {
@@ -88,12 +86,33 @@ func (s *WebSocketServer) handleConnection(controllers []entities.Controller) fu
 				// call OnDisconnect for all controllers
 				s.disconnectClientById(client.Id, controllers)
 			} else {
-				// pass message to socket controller
-				for _, controller := range controllers {
-					command := CommandFromPacket(packet)
-					command.Responder = responder
-					controller.ParseCommand(&client, command)
+				// append client's id to FromId if not present
+				if packet.FromId == "" {
+					packet.FromId = client.Id
 				}
+
+				// parse command and add responder
+				command := CommandFromPacket(packet)
+				command.Responder = responder
+
+				if command.TargetDeviceId != "" {
+					// command is intended for another device, attempt to proxy it
+					targetClient := s.locateClient(command.TargetDeviceId)
+					if targetClient != nil {
+						// target client found, proxy command
+						targetClient.SendCommand(command)
+					} else {
+						responder.RespondError(
+							"unable to transmit command to destination - no device with id '" + command.TargetDeviceId + "' exists",
+						)
+					}
+				} else {
+					// command is intended for server, pass to controller
+					for _, controller := range controllers {
+						controller.ParseCommand(&client, command)
+					}
+				}
+
 			}
 
 		}

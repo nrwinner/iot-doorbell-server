@@ -8,8 +8,6 @@ import (
 	"github.com/pion/webrtc/v3"
 )
 
-// TODO:NickW handle case where two entities want to directly connect, instead of using client/server model
-
 func HandleNewCommand(controller *WebRTCController, command entities.Command) {
 	// create a new uuid for the connection
 	id := uuid.New().String()
