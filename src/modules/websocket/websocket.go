@@ -2,6 +2,7 @@ package websocket
 
 import (
 	"doorbell-server/src/entities"
+	"fmt"
 	"net/http"
 
 	ws "github.com/gorilla/websocket"
@@ -21,18 +22,20 @@ func (s WebSocketServer) StartServer(controllers []entities.Controller) {
 	err := http.ListenAndServe(":1234", nil)
 
 	if err != nil {
-		// TODO:NickW better error handling here
+		// TODO(nrwinner) better error handling here
 		panic(err)
 	}
 }
 
 func (s *WebSocketServer) handleConnection(controllers []entities.Controller) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		upgrader := ws.Upgrader{}
+		// FIXME(nrwinner) this is extremely insecure, lets not blindly trust all origins
+		upgrader := ws.Upgrader{CheckOrigin: func(r *http.Request) bool { return true }}
 		conn, err := upgrader.Upgrade(w, r, nil)
 
 		if err != nil {
 			// error upgrading HTTP request to WS
+			fmt.Println("ORIGIN WOOHOO", r.Header.Get("origin"))
 			panic(err)
 		}
 
@@ -42,10 +45,10 @@ func (s *WebSocketServer) handleConnection(controllers []entities.Controller) fu
 		var packet CommandPacket
 		err = conn.ReadJSON(&packet)
 
-		id, hasId := packet.Args["id"]
+		id, hasID := packet.Args["id"]
 		role, hasRole := packet.Args["role"]
 
-		if err != nil || packet.Command != initPacket || !hasId || !hasRole {
+		if err != nil || packet.Command != initPacket || !hasID || !hasRole {
 			socketErrorAndTerminate(conn, "could not decode init packet")
 			return
 		}

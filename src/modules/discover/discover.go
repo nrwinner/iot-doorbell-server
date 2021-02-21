@@ -10,8 +10,12 @@ const (
 )
 
 func StartDiscoveryServer() {
-	pc, err := net.ListenPacket("udp4", ":9999")
+	listenAddr, err := net.ResolveUDPAddr("udp4", ":9999")
+	if err != nil {
+		panic(err)
+	}
 
+	pc, err := net.ListenUDP("udp", listenAddr)
 	if err != nil {
 		panic(err)
 	}

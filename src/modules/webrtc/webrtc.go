@@ -108,6 +108,7 @@ func HandleOfferCommand(controller *WebRTCController, command entities.Command) 
 	answerCommand := entities.Command{
 		Path: ANSWER_COMMAND,
 		Args: map[string]string{
+			"id": id,
 			"answer": string(answerStr),
 		},
 	}
